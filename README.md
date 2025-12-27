@@ -12,35 +12,13 @@ This project implements a production-ready dynamic pricing engine that leverages
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           DYNAMIC PRICING ENGINE                             │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐                   │
-│  │   Data Lake  │───▶│  Feature     │───▶│  ML Models   │                   │
-│  │  (S3/Delta)  │    │  Store       │    │  (GPU)       │                   │
-│  └──────────────┘    └──────────────┘    └──────────────┘                   │
-│         │                   │                   │                            │
-│         ▼                   ▼                   ▼                            │
-│  ┌──────────────────────────────────────────────────────────────┐           │
-│  │                    STREAMING LAYER (Kafka)                    │           │
-│  └──────────────────────────────────────────────────────────────┘           │
-│         │                   │                   │                            │
-│         ▼                   ▼                   ▼                            │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐                   │
-│  │   Price      │◀──▶│   Redis      │◀──▶│   API        │                   │
-│  │   Optimizer  │    │   Cache      │    │   Gateway    │                   │
-│  │   (GPU)      │    │   (< 1ms)    │    │   (FastAPI)  │                   │
-│  └──────────────┘    └──────────────┘    └──────────────┘                   │
-│                                                 │                            │
-│                                                 ▼                            │
-│                                          ┌──────────────┐                   │
-│                                          │  E-Commerce  │                   │
-│                                          │  Platform    │                   │
-│                                          └──────────────┘                   │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+The dynamic pricing engine follows a three-tier architecture designed for high throughput and low latency.
+
+**Data Layer**: Raw transactional data flows from the data lake (S3/Delta Lake) into a feature store that maintains real-time features such as inventory levels, competitor prices, and demand signals. These features are continuously updated via a Kafka streaming layer that processes events from multiple sources.
+
+**ML Layer**: The feature store feeds into GPU-accelerated machine learning models including demand forecasters (LSTM/Transformer), price elasticity estimators, and a reinforcement learning agent. These models run on the GPU and produce pricing recommendations based on the current market state.
+
+**Serving Layer**: The price optimizer combines model outputs with business constraints (minimum margins, maximum price changes) to compute final prices. Results are cached in Redis with sub-millisecond access times. The FastAPI gateway serves pricing requests to the e-commerce platform, achieving P99 latencies under 10ms through async processing and intelligent cache warming.
 
 ## Key Components
 
@@ -218,7 +196,7 @@ $$p^* = \arg\max_p \left[ p \cdot Q(p) \right] \quad \text{s.t.} \quad Q(p) \leq
 
 ### Reinforcement Learning Formulation
 
-- **State**: $(p_t, q_t, I_t, c_t^{comp}, s_t)$ - current price, demand, inventory, competitor prices, seasonality
+- **State**: $(p_t, q_t, I_t, c_t, s_t)$ - current price, demand, inventory, competitor prices, seasonality
 - **Action**: Price adjustment $\Delta p \in \{-10\%, -5\%, 0\%, +5\%, +10\%\}$
 - **Reward**: $r_t = (p_t - c) \cdot q_t - \lambda \cdot \max(0, q_t - I_t)$
 
