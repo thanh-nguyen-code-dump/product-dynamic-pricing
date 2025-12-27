@@ -1,0 +1,174 @@
+# Dynamic Pricing Engine Configuration
+# =====================================
+
+# Model Configuration
+model:
+  # Demand Forecasting Model
+  demand_forecaster:
+    architecture: "transformer"  # "transformer" or "lstm"
+    hidden_size: 256
+    num_layers: 4
+    num_heads: 8
+    dropout: 0.1
+    sequence_length: 90  # 90 days of history
+    forecast_horizon: 14  # 14 days ahead
+    num_features: 15
+    batch_size: 512
+    quantiles: [0.1, 0.5, 0.9]
+    
+  # Price Elasticity Model
+  elasticity:
+    method: "bayesian"  # "ols", "iv", or "bayesian"
+    prior_mean: -1.5
+    prior_std: 0.5
+    min_observations: 100  # Min data points for estimation
+    update_frequency: "daily"
+    
+    # Category-specific defaults
+    category_defaults:
+      electronics: -2.5
+      groceries: -1.2
+      fashion: -2.0
+      home: -1.5
+      default: -1.8
+  
+  # Reinforcement Learning
+  reinforcement_learner:
+    algorithm: "dqn"  # "dqn", "ppo", or "sac"
+    state_dim: 12
+    hidden_sizes: [256, 256, 128]
+    gamma: 0.99
+    tau: 0.005
+    learning_rate: 0.0001
+    batch_size: 256
+    buffer_size: 100000
+    epsilon_start: 1.0
+    epsilon_end: 0.01
+    epsilon_decay: 0.9995
+    
+# Optimization Configuration
+optimizer:
+  # Default objective
+  default_objective: "profit"  # "profit", "revenue", "market_share"
+  
+  # Business constraints
+  constraints:
+    min_margin: 0.15  # 15% minimum margin
+    max_price_change: 0.20  # 20% max daily change
+    min_price_ratio: 0.50  # Don't go below 50% of base
+    max_price_ratio: 2.00  # Don't go above 200% of base
+    inventory_threshold: 50  # Safety stock
+    competitor_floor: 0.05  # Don't undercut by more than 5%
+  
+  # Feature weights for scoring
+  feature_weights:
+    demand_forecast: 0.35
+    competitor_price: 0.25
+    elasticity: 0.20
+    inventory_pressure: 0.10
+    seasonality: 0.10
+
+# GPU Configuration
+gpu:
+  enabled: true
+  device: "auto"  # "auto", "cuda:0", "mps", or "cpu"
+  batch_size: 65536  # Products per batch
+  mixed_precision: true  # FP16 for faster inference
+  num_streams: 4  # CUDA streams for concurrency (NVIDIA only)
+  memory_fraction: 0.8  # Max GPU memory to use
+  
+# Cache Configuration
+cache:
+  enabled: true
+  backend: "redis"  # "redis" or "memcached"
+  redis_url: "redis://localhost:6379"
+  ttl_seconds: 300  # 5 minute cache
+  warmup_enabled: true
+  warmup_batch_size: 10000
+
+# API Configuration
+api:
+  host: "0.0.0.0"
+  port: 8000
+  workers: 4
+  timeout_seconds: 30
+  rate_limit:
+    enabled: true
+    requests_per_minute: 1000
+  
+  # Performance targets
+  targets:
+    p50_latency_ms: 3
+    p95_latency_ms: 7
+    p99_latency_ms: 10
+    throughput_rps: 15000
+
+# Data Pipeline
+data:
+  # Feature store
+  feature_store:
+    backend: "feast"  # "feast" or "custom"
+    online_store: "redis"
+    offline_store: "delta"
+    update_frequency: "hourly"
+  
+  # Streaming
+  streaming:
+    enabled: true
+    backend: "kafka"
+    topics:
+      transactions: "pricing.transactions"
+      prices: "pricing.price_updates"
+      competitor: "pricing.competitor_prices"
+    
+  # Batch
+  batch:
+    enabled: true
+    schedule: "0 */4 * * *"  # Every 4 hours
+    data_path: "s3://pricing-data/historical/"
+
+# Monitoring
+monitoring:
+  # Metrics
+  prometheus:
+    enabled: true
+    port: 9090
+    
+  # Alerting
+  alerts:
+    latency_threshold_ms: 20
+    error_rate_threshold: 0.01
+    revenue_drop_threshold: 0.05
+    
+  # Dashboards
+  grafana:
+    enabled: true
+    dashboard_path: "dashboards/"
+
+# A/B Testing
+ab_testing:
+  enabled: true
+  default_treatment_fraction: 0.10
+  min_sample_size: 1000
+  significance_level: 0.05
+  power: 0.80
+  
+  # Sequential testing
+  sequential:
+    enabled: true
+    max_looks: 5
+    spending_function: "obrien_fleming"
+
+# Logging
+logging:
+  level: "INFO"
+  format: "json"
+  output: "stdout"
+  
+  # Structured logging fields
+  include_fields:
+    - timestamp
+    - request_id
+    - product_id
+    - latency_ms
+    - cache_hit
