@@ -197,7 +197,7 @@ $$p^* = \arg\max_p \left[ p \cdot Q(p) \right] \quad \text{s.t.} \quad Q(p) \leq
 ### Reinforcement Learning Formulation
 
 - **State**: $(p_t, q_t, I_t, c_t, s_t)$ - current price, demand, inventory, competitor prices, seasonality
-- **Action**: Price adjustment $\Delta p \in \{-10\%, -5\%, 0\%, +5\%, +10\%\}$
+- **Action**: Price adjustment $\Delta p \in \lbrace -10\\%, -5\\%, 0\\%, +5\\%, +10\\% \rbrace$
 - **Reward**: $r_t = (p_t - c) \cdot q_t - \lambda \cdot \max(0, q_t - I_t)$
 
 ## Configuration
